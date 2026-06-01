@@ -1,33 +1,29 @@
-import RPi.GPIO as GPIO
 import time
+from gpiozero import Button
 
-FLOW_SENSOR_PIN = 17          # BCM numbering (physical pin 11)
-CALIBRATION_FACTOR = 7.5      # Pulses per liter — adjust for your model
-
+CALIBRATION_FACTOR = 330
 pulse_count = 0
 total_liters = 0.0
 
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(FLOW_SENSOR_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+sensor = Button(17, pull_up=True)
 
-def pulse_callback(channel):
+def pulse_callback():
     global pulse_count
     pulse_count += 1
 
-GPIO.add_event_detect(FLOW_SENSOR_PIN, GPIO.FALLING, callback=pulse_callback)
+sensor.when_pressed = pulse_callback
 
 try:
     print("Monitoring water flow... Press Ctrl+C to stop.")
     while True:
         pulse_count = 0
-        time.sleep(1)  # Sample every second
+        time.sleep(1)
 
-        flow_rate = (pulse_count / CALIBRATION_FACTOR)  # Liters per second
-        flow_lpm  = flow_rate * 60                       # Liters per minute
+        flow_rate = pulse_count / CALIBRATION_FACTOR
+        flow_lpm  = flow_rate * 60
         total_liters += flow_rate
 
         print(f"Flow: {flow_lpm:.2f} L/min | Total: {total_liters:.3f} L")
 
 except KeyboardInterrupt:
     print("Stopped.")
-    GPIO.cleanup()
